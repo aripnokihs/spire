@@ -40,6 +40,19 @@ namespace system_ns {
 #define IPC_TO_PARENT_HMICLIENT "/tmp/hmiproxy_ipc_ioproc_to_proxy"
 #define IPC_FROM_PARENT_HMICLIENT "/tmp/hmiproxy_ipc_proxy_to_ioproc"
 
+#ifndef SPIRE_ROOT_DIR
+// If SPIRE_ROOT_DIR wasn't passed by the compiler, default to:
+    #define SPIRE_ROOT_DIR ../ // note that the IO proc is ran by the proxy so this directory is set relative to the proxy's binary
+#endif
+
+// following makes it easier to use the compile macro as a string
+#define STR_(x) #x
+#define STR(x)  STR_(x)
+
+// following is a relative path from the root spire directory
+#define CLIENT_KEYS_PRIME "prime/bin/keys";
+#define CLIENT_KEYS_SM    "scada_master/sm_keys"
+
 int HMI_scenario = PNNL;
 // int HMI_scenario = JHU;
 
@@ -182,7 +195,7 @@ void _itrc_init_hmi(std::string spinesd_ip_addr, int spinesd_port, system_ns::it
     sprintf(itrc_data_main.sm_keys_dir, "%s", hmi_sm_keys_dir.c_str());
     sprintf(itrc_data_main.ipc_local, "%s%d", hmiproxy_ipc_main_procfile.c_str(), system_ns::My_ID);
     sprintf(itrc_data_main.ipc_remote, "%s%d", hmiproxy_ipc_itrc_procfile.c_str(), system_ns::My_ID);
-    
+
     sock_main_to_itrc_thread = system_ns::IPC_DGram_Sock(itrc_data_main.ipc_local);
 
     // Setup IPC for Worker thread (itrc client)
@@ -200,8 +213,13 @@ void itrc_init_ioproc(std::string ioproc_spinesd_ip_addr, int ioproc_spinesd_por
         // std::string prime_keys = HMI_PRIME_KEYS; 
         // std::string sm_keys = HMI_SM_KEYS;
         // the above macro defines dont have the right relative path. so using the following: // TODO add/fix a macro defines
-        std::string prime_keys = "../prime/bin/keys"; 
-        std::string sm_keys = "../scada_master/sm_keys";
+        std::string spire_root = STR(SPIRE_ROOT_DIR);
+        std::string prime_keys_from_spire_root = CLIENT_KEYS_PRIME;
+        std::string sm_keys_from_spire_root = CLIENT_KEYS_SM;
+
+        std::string prime_keys = spire_root + prime_keys_from_spire_root; 
+        std::string sm_keys    = spire_root + sm_keys_from_spire_root;
+
         _itrc_init_hmi( ioproc_spinesd_ip_addr, 
                     ioproc_spinesd_port, 
                     ioproc_mainthread_to_itrcthread_data, 
@@ -214,8 +232,16 @@ void itrc_init_ioproc(std::string ioproc_spinesd_ip_addr, int ioproc_spinesd_por
         );
     }
     else { // client is PLC/RTU
-        std::string prime_keys = PROXY_PRIME_KEYS; 
-        std::string sm_keys = PROXY_SM_KEYS;
+        // std::string prime_keys = PROXY_PRIME_KEYS; 
+        // std::string sm_keys = PROXY_SM_KEYS;
+
+        std::string spire_root = STR(SPIRE_ROOT_DIR);
+        std::string prime_keys_from_spire_root = CLIENT_KEYS_PRIME;
+        std::string sm_keys_from_spire_root = CLIENT_KEYS_SM;
+
+        std::string prime_keys = spire_root + prime_keys_from_spire_root; 
+        std::string sm_keys    = spire_root + sm_keys_from_spire_root;
+
         _itrc_init_plcrtu( ioproc_spinesd_ip_addr, 
             ioproc_spinesd_port, 
             ioproc_mainthread_to_itrcthread_data, 

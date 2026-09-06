@@ -2,6 +2,8 @@
 
 SPIRE_DIR  = ../../
 
+SPIRE_ROOT_DIR_REL_TO_PROXY = ../
+
 BINARY_NAME = io_process
 
 CC            = gcc
@@ -89,7 +91,7 @@ clean:
 	rm -rf $(TARGET)
 
 $(BINARY_NAME).o: io_process.cpp $(HEADERS_LIST)
-	$(CXX) -c $(CXXFLAGS) $(CPPFLAGS) $(INCLUDE_PATH) -o $(BINARY_NAME).o io_process.cpp
+	$(CXX) -c $(CXXFLAGS) -DSPIRE_ROOT_DIR=$(SPIRE_ROOT_DIR_REL_TO_PROXY) $(CPPFLAGS) $(INCLUDE_PATH) -o $(BINARY_NAME).o io_process.cpp
 
 
 demo_io_proc_conf1.o: demo_io_proc_conf1.cpp $(HEADERS_LIST)
