@@ -62,6 +62,7 @@ SM_OBJ=scada_master.o \
         ../common/tc_wrapper.o \
         ../common/itrc.o \
 		../common/key_value.o \
+		../common/key_ip.o \
 		../config/cJSON.o \
 		../config/config_helpers.o
 CONF_SM_OBJ=conf_scada_master.o \

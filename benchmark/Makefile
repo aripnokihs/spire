@@ -65,6 +65,7 @@ OBJECTS   = benchmark.o \
                 ../common/tc_wrapper.o \
                 ../common/itrc.o \
 				../common/key_value.o \
+				../common/key_ip.o \
             	../config/cJSON.o \
             	../config/config_helpers.o
 
@@ -96,6 +97,7 @@ benchmark.o: benchmark.cpp  \
 		../common/def.h \
         ../common/itrc.h \
 		../common/key_value.h \
+		../common/key_ip.h \
 		../config/cJSON.h \
 		../config/config_helpers.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o benchmark.o benchmark.cpp

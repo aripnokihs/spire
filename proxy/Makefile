@@ -63,6 +63,7 @@ OBJECTS=proxy.o \
 		../common/tc_wrapper.o \
 		../common/itrc.o \
 		../common/key_value.o \
+		../common/key_ip.o \
 		../config/cJSON.o \
 		../config/config_helpers.o
 
@@ -73,6 +74,7 @@ CC_OBJECTS=cc_connector.o \
                 ../common/tc_wrapper.o \
                 ../common/itrc.o \
                 ../common/key_value.o \
+				../common/key_ip.o \
                 ../config/cJSON.o \
                 ../config/config_helpers.o
 
@@ -84,6 +86,7 @@ IED_OBJECTS=ied_connector.o \
                 ../common/tc_wrapper.o \
                 ../common/itrc.o \
                 ../common/key_value.o \
+				../common/key_ip.o \
                 ../config/cJSON.o \
                 ../config/config_helpers.o
 
