@@ -25,6 +25,13 @@ To use your generated config with Docker, you could then run (from the top-level
 docker build --build-arg CONF_DIR=scripts/conf/<specific_conf_dir> -t spire-img .
 ```
 
+```
+docker build \
+  -f docker/Dockerfile \
+  --build-arg CONF_DIR=scripts/conf/conf_4m \
+  -t spire-img \
+  .
+```
 and to bring up the config:
 ```
 docker compose -f scripts/conf/<specific_conf_dir>/docker-compose.yml --profile full up -d
