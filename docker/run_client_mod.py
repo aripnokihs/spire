@@ -50,7 +50,7 @@ def start_plc(rtu_id):
         ems_cmd = f"cd {base_dir}/plcs/ems{ems_id} && ./openplc -m {513+ems_id} -d {20011+ems_id}"
         run_cmd(ems_cmd, f"plc_ems_{ems_id}", f"{log_dir}/out_plc_ems_{ems_id}.txt")
     elif 14 <= rtu_id <= 16: # EMS
-        names = ["jhu_hmi", "pnnl_hmi", "ems_hmi"]
+        names = ["ems_hydro", "ems_solar", "ems_wind"]
         ems_id = rtu_id - 14
         name = names[ems_id]
         ems_cmd = f"cd {base_dir}/plcs/{name} && ./openplc -m {516+ems_id} -d {20014+ems_id}"
