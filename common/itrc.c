@@ -70,7 +70,7 @@
 #include "../config/cJSON.h"
 #include "../config/config_helpers.h"
 #include "key_value.h"
-#include "stdutil/stddll.h"
+// #include "stdutil/stddll.h" // temp for attack demo on itrc-based sm: uncomment this
 
 /* These are flags used in the TC queue */
 #define NORMAL_ORD 1
@@ -847,7 +847,7 @@ void *ITRC_Master(void *data)
 
     /* Grab IPC info */
     itrcd = (itrc_data *)data;
-    ns.ipc_s = IPC_DGram_Sock(itrcd->ipc_local);
+    ns.ipc_s = IPC_DGram_Sock(itrcd->ipc_local); // messages from scada_master are received on 'ns.ipc_s' socket
     memcpy(ns.ipc_remote, itrcd->ipc_remote, sizeof(ns.ipc_remote));
     FD_SET(ns.ipc_s, &mask);
     
@@ -1159,7 +1159,7 @@ void *ITRC_Master(void *data)
                     //continue;
             }//ipc_config_s
 
-            /* Incoming IPC message */
+            /* Incoming IPC message from scada_master's main function */
             if (FD_ISSET(ns.ipc_s, &tmask)) {
                 nBytes = IPC_Recv(ns.ipc_s, buff, MAX_LEN);
                 scada_mess = (signed_message *)buff;
@@ -1432,7 +1432,6 @@ void *ITRC_Master(void *data)
     stddll_destruct(&ord_queue);
     return NULL;
 }
-
 
 void oob_reconfigure(signed_message *mess,void *data)
 {

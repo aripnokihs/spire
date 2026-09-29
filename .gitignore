@@ -4,7 +4,6 @@
 *.log
 *.out
 
-
 # Object and library files
 *.o
 *.do
@@ -131,6 +130,9 @@ pvb/designer/src/Makefile.pvbplugin
 !benchmark/Makefile
 !dnp3/Makefile
 !hmis/Makefile
+!hmis/proxy/Makefile
+!hmis/proxy/**/Makefile
+!hmis/pnnl_hmi_for_proxy/Makefile
 !hmis/ems_hmi/Makefile
 !hmis/heco_3breaker/Makefile
 !hmis/heco_5breaker/Makefile
@@ -146,6 +148,9 @@ pvb/designer/src/Makefile.pvbplugin
 !prime/src/Makefile
 !prime/stdutil/Makefile
 !proxy/Makefile
+!proxy/**/Makefile
+!switcher/Makefile
+!data_collector/Makefile
 !scada_master/Makefile
 !spines/stdutil/Makefile
 !relay_emulator/Makefile
@@ -299,3 +304,4 @@ libiec61850/.install
 #TM Keys
 trip_master_v2/tm_keys
 trip_master/tm_keys
+.DS_Store

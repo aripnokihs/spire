@@ -435,6 +435,28 @@ void PR_Start_Recovery()
     /* Create my new incarnation message that kickstarts the recovery */
     DATA.PR.new_incarnation[VAR.My_Server_ID] = PR_Construct_New_Incarnation_Message();
 
+    // potential fix for conf 1 could be something like adding the following:
+    // if (DATA.PR.reset_vote_count == 2*VAR.F + VAR.K) {
+    //     /* if (DATA.PR.recovery_status[VAR.My_Server_ID] == PR_STARTUP)
+    //         DATA.PR.num_startup--;
+    //     DATA.PR.recovery_status[VAR.My_Server_ID] = PR_RESET; */
+
+    //     /* Enqueue the Rotate leader function in case the current leader doesn't
+    //      * do its job fast enough to get the system up and running */
+    //     /* t.sec  = SYSTEM_RESET_TIMEOUT_SEC;
+    //     t.usec = SYSTEM_RESET_TIMEOUT_USEC;
+    //     E_queue(PR_Rotate_Reset_Leader, 0, NULL, t); */
+
+    //     /* Each replica constructs their reset share */
+	// Alarm(DEBUG,"Sahiti****: Sending Reset Share as DATA.PR.reset_vote_count=%d,needed=%d\n",DATA.PR.reset_vote_count,2*VAR.F + VAR.K);
+    //     share = PR_Construct_Reset_Share();
+    //     SIG_Add_To_Pending_Messages(share, BROADCAST, UTIL_Get_Timeliness(RESET_SHARE));
+    //     dec_ref_cnt(share);
+    // }
+	// else{
+	// Alarm(DEBUG,"Sahiti****: DATA.PR.reset_vote_count=%d,needed=%d\n",DATA.PR.reset_vote_count,2*VAR.F + VAR.K);
+	// }
+
     /* Multicast my new_incarnation message */ 
     SIG_Add_To_Pending_Messages(DATA.PR.new_incarnation[VAR.My_Server_ID], BROADCAST, 
         UTIL_Get_Timeliness(NEW_INCARNATION));

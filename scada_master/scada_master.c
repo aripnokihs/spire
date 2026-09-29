@@ -62,6 +62,15 @@
 #include "structs.h"
 #include "queue.h"
 
+// for SM compromise demo
+#ifndef COMPROMISE_DEMO
+#define COMPROMISE_DEMO 0
+#endif
+
+#if COMPROMISE_DEMO
+#include <pthread.h>
+#endif
+
 int ipc_sock;
 itrc_data itrc_main, itrc_thread;
 
@@ -102,8 +111,197 @@ void print_state();
 int Verify_Config_msg(signed_message *);
 
 
+#if COMPROMISE_DEMO
+// we provide a demo to show how a compromised SM can behave
+// for this we have a "backdoor" which the attacker can use to intruct this SM on what to do
+// there is a thread continuously reading a file called attack.txt in the ./ directory
+// the function reads and ignores anything already in the file
+// then it saves the last position where it read from 
+// so keep on appending to the end of the file for new 'attack' instructions
+
+static pthread_mutex_t attack_lock = PTHREAD_MUTEX_INITIALIZER;
+static struct {
+    int      armed;        /* 0 = inactive, 1 = fire on next HMI command   */
+    int      breaker_pos;  /* attacker's chosen breaker index              */
+    int      val;          /* 1 = BREAKER_ON, 0 = BREAKER_OFF */
+    int      one_shot;     /* disarm after firing once                     */
+} atk = {0, 0, 0, 1};
+
+/* New attack.txt line format:  1_<breaker_pos>_<onoff>
+ * No seq/ordinal tokens anymore — we override the real ordinal. */
+
+void apply_attack(char *attack_instr) {
+    size_t len = strlen(attack_instr);
+    if (len > 0 && attack_instr[len - 1] == '\n') attack_instr[len - 1] = '\0';
+
+    char *type = strtok(attack_instr, "_");
+    if (type == NULL) return;
+
+    if (strcmp(type, "1") == 0) {
+        char *tok_pos   = strtok(NULL, "_");
+        char *tok_onoff = strtok(NULL, "_");
+        if (!tok_pos || !tok_onoff) { printf("apply_attack: bad args\n"); return; }
+
+        pthread_mutex_lock(&attack_lock);
+        atk.breaker_pos = atoi(tok_pos);
+        atk.val         = atoi(tok_onoff);
+        atk.armed       = 1;
+        pthread_mutex_unlock(&attack_lock);
+        printf("apply_attack: ARMED breaker %d -> %d\n", atk.breaker_pos, atk.val);
+    } else {
+        printf("apply_attack: unrecognized token\n");
+    }
+}
+/* old apply_attack fn:
+void apply_attack(char * attack_instr) {
+    // attack_instr format:
+    // 1:
+
+    size_t len = strlen(attack_instr);
+    if (len > 0 && attack_instr[len - 1] == '\n') { // remove trailing '\n'
+        attack_instr[len - 1] = '\0';
+    }
+
+    const char delimiter[] = "_";
+    char *tok_intr_type;
+    tok_intr_type = strtok(attack_instr, delimiter);
+
+    if (strcmp(tok_intr_type, "1") == 0) { // strcmp returns 1 if the strings are identical
+        char *tok_seq_inc;
+        tok_seq_inc = strtok(NULL, delimiter);
+        char *tok_seq_num;
+        tok_seq_num = strtok(NULL, delimiter);
+        seq_pair this_seq_pair;
+        this_seq_pair.incarnation = My_Incarnation;//atoi(tok_seq_inc);
+        this_seq_pair.seq_num = atoi(tok_seq_num);
+
+        char *tok_breaker_pos;
+        tok_breaker_pos = strtok(NULL, delimiter);
+
+        char *tok_breaker_onoff;
+        tok_breaker_onoff = strtok(NULL, delimiter);
+
+        int cmd_val = atoi(tok_breaker_onoff); // 1 is BREAKER_ON. 0 is BREAKER_OFF
+        
+        signed_message *dad_mess = NULL;
+
+
+        dad_mess = PKT_Construct_RTU_Feedback_Msg(this_seq_pair, PNNL,
+                        BREAKER, PNNL_RTU_ID, PNNL_RTU_ID, atoi(tok_breaker_pos), cmd_val);
+        
+        ordinal o_fake;
+        o_fake.event_idx = 150;
+        o_fake.event_tot = 150;
+        o_fake.ord_num = 150;
+        stddll_push_back(&ord_queue, &o_fake);
+
+        int nbytes = sizeof(signed_message) + sizeof(rtu_feedback_msg);
+        IPC_Send(ipc_sock, (void *)dad_mess, nbytes, itrc_main.ipc_remote); // send to spines_comm_handler to send to the clients
+        free(dad_mess);
+
+        printf("apply_attack(): attack #1\n");
+    }
+    else if (strcmp(tok_intr_type, "2") == 0) {
+        
+        char* tok_seq_inc;
+        tok_seq_inc = strtok(NULL, delimiter);
+        char*tok_seq_num;
+        tok_seq_num = strtok(NULL, delimiter);
+        seq_pair this_seq_pair;
+        this_seq_pair.incarnation = atoi(tok_seq_inc);
+        this_seq_pair.seq_num = atoi(tok_seq_num);
+
+        pnnl_fields pf;
+
+        // rest of tokens: use '.' to skip. other values used as index and the val to overwrite with
+        // point_idx, point_arr_val, breaker_read_idx, breaker_read_arr_val, breaker_write_idx, breaker_write_arr_val
+        char* token_point_idx;
+        token_point_idx = strtok(NULL, delimiter);
+        char* token_point_val;
+        token_point_val = strtok(NULL, delimiter);
+        char* token_br_idx; 
+        token_br_idx = strtok(NULL, delimiter);
+        char* token_br_val;
+        token_br_val = strtok(NULL, delimiter);
+        char* token_bw_idx;
+        token_bw_idx = strtok(NULL, delimiter);
+        char* token_bw_val;
+        token_bw_val = strtok(NULL, delimiter);
+        
+        if ((strcmp(token_point_idx, ".") != 0) && (strcmp(token_point_val, ".") != 0))
+            pf.point[atoi(token_point_idx)] = atoi(token_point_val);
+        if ((strcmp(token_br_idx, ".") != 0) && (strcmp(token_br_val, ".") != 0))
+            pf.breaker_read[atoi(token_br_idx)] = atoi(token_br_val);
+        if ((strcmp(token_bw_idx, ".") != 0) && (strcmp(token_bw_val, ".") != 0))
+            pf.breaker_write[atoi(token_bw_idx)] = atoi(token_bw_val);
+
+        struct timeval now;
+        gettimeofday(&now, NULL);
+
+        signed_message * mess = PKT_Construct_HMI_Update_Msg(
+                                    this_seq_pair,
+                                    PNNL,
+                                    RTU_DATA_PAYLOAD_LEN - PNNL_DATA_PADDING,
+                                    (char *)(((char *)&pf) + PNNL_DATA_PADDING),
+                                    now.tv_sec, 
+                                    now.tv_usec
+                                );
+        
+        ordinal o_fake;
+        o_fake.event_idx = 99;
+        o_fake.event_tot = 99;
+        o_fake.ord_num = 99;
+        stddll_push_back(&ord_queue, &o_fake);
+        int nbytes = sizeof(signed_message) + mess->len;
+        IPC_Send(ipc_sock, (void *)mess, nbytes, itrc_main.ipc_remote); // send to spines_comm_handler to send to the clients
+        free(mess);
+        printf("apply_attack(): attack #2\n");
+    }
+    else {
+        printf("apply_attack(): unrecognized token\n");
+        // TODO
+        return;
+    }
+}
+*/
+void* read_file(void *arg) {
+    UNUSED(arg);
+    char filename[] = "./attack.txt";
+    
+    // from: https://stackoverflow.com/questions/47986833/read-a-continuously-updated-file-and-wait-for-new-data-to-be-written-to-the-file
+    FILE * fp;
+    char * line = NULL;
+    size_t len = 0;
+
+    fp = fopen(filename, "r");
+    if (fp == NULL) {
+        printf("Unable to access the file %s. Exiting.\n", filename);
+        perror(filename);
+        exit(EXIT_FAILURE);
+    }
+
+    while (1) {
+        if (getline(&line, &len, fp) != -1) {
+            // printf("%s", line);
+            apply_attack(line);
+        }
+        else {
+            // printf("EOF\n");
+            sleep(1);
+            clearerr(fp);
+        }
+    }
+
+    if (line) {
+        free(line);
+    }
+}
+#endif
+
+
 int main(int argc, char **argv)
-{
+{   
+    
     int nbytes, id, i, ret,debug_ret,debug_ret2;
     char buf[MAX_LEN];
     char *ip;
@@ -122,6 +320,11 @@ int main(int argc, char **argv)
 
     printf("INIT\n");
     init();
+
+    #if COMPROMISE_DEMO
+    pthread_t attack_demo_thread;
+    pthread_create(&attack_demo_thread, NULL, &read_file, NULL);
+    #endif
 
     // NET Setup
     gettimeofday(&now, NULL);
@@ -186,7 +389,7 @@ int main(int argc, char **argv)
         tmask = mask;
         debug_ret=select(FD_SETSIZE, &tmask, NULL, NULL, NULL);
 //	printf("debug_ret=%d\n",debug_ret);
-        if (FD_ISSET(ipc_sock, &tmask)) {
+        if (FD_ISSET(ipc_sock, &tmask)) { // message from ITRC_Master to scada_master
             ret = IPC_Recv(ipc_sock, buf, MAX_LEN);
             mess = (signed_message *)buf;
 
@@ -224,7 +427,7 @@ int main(int argc, char **argv)
                                 t.tv_sec, t.tv_usec);
                 }
                 nbytes = sizeof(signed_message) + mess->len;
-                IPC_Send(ipc_sock, (void *)mess, nbytes, itrc_main.ipc_remote);
+                IPC_Send(ipc_sock, (void *)mess, nbytes, itrc_main.ipc_remote); // send to ITRC_Master
                 free(mess);
             }
             else if(mess->type==PRIME_OOB_CONFIG_MSG){
@@ -249,7 +452,7 @@ int main(int argc, char **argv)
                 ben->pong_sec = 0; //now.tv_sec;
                 ben->pong_usec = 0; //now.tv_usec;
                 //printf("MS2022: In scada_master: RECEIVED BENCHMARK MESSAGE\n");
-                IPC_Send(ipc_sock, (void *)mess, ret, itrc_main.ipc_remote);
+                IPC_Send(ipc_sock, (void *)mess, ret, itrc_main.ipc_remote); // send to ITRC_Master
             }
             else if (mess->type == STATE_REQUEST) {
                 package_and_send_state(mess);
@@ -713,9 +916,23 @@ void read_from_hmi(signed_message *mess)
         else if (payload->type == BREAKER_OFF) {
             val = 0;
         }
+	int fb_pos = payload->ttip_pos;
+
+	#if COMPROMISE_DEMO
+        
+	pthread_mutex_lock(&attack_lock);
+        if (atk.armed) {
+            fb_pos = atk.breaker_pos;     /* override target breaker */
+            val    = atk.val;             /* override to fixed ON/OFF (deterministic) */
+            if (atk.one_shot) atk.armed = 0;
+            printf("COMPROMISE DEMO: substituting -> breaker %d = %d (ord rides this HMI cmd)\n", fb_pos, val);
+        }
+        pthread_mutex_unlock(&attack_lock);
+        
+        #endif
 
         dad_mess = PKT_Construct_RTU_Feedback_Msg(payload->seq, payload->scen_type,
-                        BREAKER, PNNL_RTU_ID, PNNL_RTU_ID, payload->ttip_pos, val);
+                        BREAKER, PNNL_RTU_ID, PNNL_RTU_ID, fb_pos, val);
     }
     else if (payload->scen_type == EMS) {
         /* payload->type is the updated Target value
@@ -754,7 +971,7 @@ void read_from_hmi(signed_message *mess)
     /* With the message constructed (from either scenario), send it on */
     if(dad_mess != NULL){
         nbytes = sizeof(signed_message) + sizeof(rtu_feedback_msg);
-        IPC_Send(ipc_sock, (void *)dad_mess, nbytes, itrc_main.ipc_remote);
+        IPC_Send(ipc_sock, (void *)dad_mess, nbytes, itrc_main.ipc_remote); // send to ITRC_Master
         free(dad_mess);
     }
 }
@@ -821,7 +1038,7 @@ void package_and_send_state(signed_message *mess)
     assert(nBytes <= MAX_LEN);
 
     // Send this message back to the ITRC
-    IPC_Send(ipc_sock, (void* )sx, nBytes, itrc_main.ipc_remote);
+    IPC_Send(ipc_sock, (void* )sx, nBytes, itrc_main.ipc_remote); // send to ITRC_Master
     free(sx);
     //print_state();
 }

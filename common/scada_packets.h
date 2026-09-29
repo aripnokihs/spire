@@ -143,6 +143,8 @@ enum crob_type{LATCH_ON, LATCH_OFF, PULSE_ON, PULSE_OFF};
 #define EMS 3
 #define INTEGRATED_CC 4
 #define INTEGRATED_SS 5
+// #define PNNL_W_PROXY 4
+// #define PROXY_FOR_PNNL 5
 
 /*
  * Type of equipment inside of substations

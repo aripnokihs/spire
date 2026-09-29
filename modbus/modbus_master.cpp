@@ -39,6 +39,16 @@ extern "C" {
   #include "../config/config_helpers.h"
 }
 
+// for PLC compromise demo
+#ifndef COMPROMISE_DEMO
+#define COMPROMISE_DEMO 0
+#endif
+
+#if COMPROMISE_DEMO
+#include <fstream>
+#include <iostream>
+#endif
+
 /* RTU information container */
 typedef struct namelist_d {
     int *namelist_count;
@@ -68,10 +78,246 @@ struct timeval    Poll_Period;
 // TODO remove
 //int counter = 0;
 //int global_val = 0;
+#if COMPROMISE_DEMO
+bool demo_plc_is_locked;
+void read_write_arrays(int rtu_id, char op, char arr_name, int arr_idx, char val_to_write_br, int32u val_to_write_point) {
+    if (!(op == 'w' || op == 'r')) {
+        printf("COMPROMISE_DEMO: op not in {'r', 'w'}. moving on...\n");
+        return;
+    }
+    if (!(arr_name == 'p' || arr_name == 'w' || arr_name == 'r')) {
+        printf("COMPROMISE_DEMO: arr_name not in {'p', 'r', 'w'}. moving on...\n");
+        return;
+    }
+    if (arr_name == 'p' && !(arr_idx >= 0 && arr_idx < NUM_POINT)) {
+        printf("COMPROMISE_DEMO: in correct arr_idx value `%d` provided. moving on...\n", arr_idx);
+        return;
+    }
+    if (!(arr_idx >= 0 && arr_idx < NUM_BREAKER)) {
+        printf("COMPROMISE_DEMO: in correct arr_idx value `%d` provided. moving on...\n", arr_idx);
+        return;
+    }
+
+    pnnl_fields *pf;
+    if (subs[rtu_id].scen_type == PNNL) {
+        pf = (pnnl_fields *)(subs[rtu_id].data);
+        if (op == 'r') {
+            printf("COMPROMISE_DEMO: reading val from array `%c` at idx `%d`: ", arr_name, arr_idx);
+            if (arr_name == 'p') {
+                printf("%d", pf->point[arr_idx]);
+            }
+            if (arr_name == 'w') {
+                printf("%d", pf->breaker_write[arr_idx]);
+            }
+            if (arr_name == 'r') {
+                printf("%d", pf->breaker_read[arr_idx]);
+            }
+            printf("\n");
+            return;
+        }
+        if (op == 'w') {
+            if (arr_name == 'p') {
+                printf("COMPROMISE_DEMO: writing val `%d` to array `%c` at idx `%d`: ", val_to_write_point, arr_name, arr_idx);
+                pf->point[arr_idx] = val_to_write_point;
+            }
+            if (arr_name == 'w') {
+                printf("COMPROMISE_DEMO: writing val `%d` to array `%c` at idx `%d`: ", val_to_write_br, arr_name, arr_idx);
+                pf->breaker_write[arr_idx] = val_to_write_br;
+            }
+            if (arr_name == 'r') {
+                printf("COMPROMISE_DEMO: writing val `%d` to array `%c` at idx `%d`: ", val_to_write_br, arr_name, arr_idx);
+                pf->breaker_read[arr_idx] = val_to_write_br;
+            }
+            printf("done.\n");
+            return;
+        }
+    }
+    else {
+        printf("COMPROMISE_DEMO: non-pnnl scenario encountered. moving on...\n");
+        return;
+    }
+}
+void apply_attack(std::string attack_instr) {
+    // attack_instr format:
+    // 2 special cases and 1 generalize format:
+    // special 1: `plc_lock` to stop applying plc updates that may be coming in
+    // special 2: `plc_unlock` to resume applying plc updates that may be coming in
+    // general format: `x_a_ri_ai_v`
+    // where,   x is either `r` to read the val of the array, `w` to write a val there, or 'a' for arbitrary breaker command
+    //      if x if `r` or `w`:
+    //          a \in {p, br, bw} corresponding to the arrays {point_arr, br_read_arr, br_write_arr}
+    //          ri is the rtu id
+    //          ai is the array index
+    //          v is what to set the value of the element (char) to i.e point_arr[i] = val, br_read_arr[i] = val, br_write_arr[i] = val
+    //             v is ignored if reading
+    //      if x is `a` (this doesnt just update data structs, it sends a fake message)
+    //          then format is ... see below under 'if (token_x == "a") {'
+
+    if (!attack_instr.empty() && attack_instr[attack_instr.length()-1] == '\n') { // remove trailing '\n'
+        attack_instr.erase(attack_instr.length()-1);
+    }
+    // special intructions first, then more general commands:
+    if (attack_instr == "plc_lock") {
+        demo_plc_is_locked = true;
+        std::cout << "apply_attack(): plc_lock applied\n";
+    }
+    else if (attack_instr == "plc_unlock") {
+        std::cout << "apply_attack(): plc_unlock applied\n";
+        demo_plc_is_locked = false;
+    }
+    else {
+        // general instructions
+        std::string s = attack_instr;
+        std::string delimiter = "_";
+        
+        std::string token_x = s.substr(0, s.find(delimiter));
+        s.erase(0, s.find(delimiter) + delimiter.length());
+    
+        if (token_x == "a") { // send a fake message
+            // tokens after the first one i.e. `a`:  sub_idx, seq_incarnation, seq_num, rtuid, scen_type, rest continued below for pnnl_fields
+            // value of '.' means skip. any other value is used to overwrite that respective value in the message
+            std::string token_sub_idx = s.substr(0, s.find(delimiter));
+            s.erase(0, s.find(delimiter) + delimiter.length());
+            
+            signed_message *mess;
+            mess = PKT_Construct_RTU_Data_Msg(&subs[std::stoi(token_sub_idx)]);
+
+            std::string token_seq_inc = s.substr(0, s.find(delimiter));
+            s.erase(0, s.find(delimiter) + delimiter.length());
+            std::string token_seq_num = s.substr(0, s.find(delimiter));
+            s.erase(0, s.find(delimiter) + delimiter.length());
+            std::string token_rtuid = s.substr(0, s.find(delimiter));
+            s.erase(0, s.find(delimiter) + delimiter.length());
+            std::string token_scen_type = s.substr(0, s.find(delimiter));
+            s.erase(0, s.find(delimiter) + delimiter.length());
+
+            rtu_data_msg* rtu_data;
+            rtu_data = (rtu_data_msg *)(mess + 1);
+            if (token_seq_inc != ".")
+                rtu_data->seq.incarnation = std::stoi(token_seq_inc);
+            if (token_seq_num != ".")
+                rtu_data->seq.seq_num = std::stoi(token_seq_num);
+            if (token_rtuid != ".")
+                rtu_data->rtu_id = std::stoi(token_rtuid);
+            if (token_scen_type != ".")
+                rtu_data->scen_type = std::stoi(token_scen_type);
+
+
+            pnnl_fields * pf = (pnnl_fields *)(rtu_data->data);
+
+            // rest of tokens: use '.' to skip. other values used as index and the val to overwrite with
+            // point_idx, point_arr_val, breaker_read_idx, breaker_read_arr_val, breaker_write_idx, breaker_write_arr_val
+            std::string token_point_idx = s.substr(0, s.find(delimiter));
+            s.erase(0, s.find(delimiter) + delimiter.length());
+            std::string token_point_val = s.substr(0, s.find(delimiter));
+            s.erase(0, s.find(delimiter) + delimiter.length());
+            std::string token_br_idx = s.substr(0, s.find(delimiter));
+            s.erase(0, s.find(delimiter) + delimiter.length());
+            std::string token_br_val = s.substr(0, s.find(delimiter));
+            s.erase(0, s.find(delimiter) + delimiter.length());
+            std::string token_bw_idx = s.substr(0, s.find(delimiter));
+            s.erase(0, s.find(delimiter) + delimiter.length());
+            std::string token_bw_val = s.substr(0, s.find(delimiter));
+            s.erase(0, s.find(delimiter) + delimiter.length());
+            
+            if ((token_point_idx != ".") && token_point_val != ".")
+                pf->point[std::stoi(token_point_idx)] = std::stoi(token_point_val);
+            if ((token_br_idx != ".") && token_br_val != ".")
+                pf->breaker_read[std::stoi(token_br_idx)] = std::stoi(token_br_val);
+            if ((token_bw_idx != ".") && token_bw_val != ".")
+                pf->breaker_write[std::stoi(token_bw_idx)] = std::stoi(token_bw_val);
+
+            int nBytes = sizeof(signed_message) + mess->len;
+            int ret = IPC_Send(ipc_sock, (void *)mess, nBytes, itrc_main.ipc_remote);
+            free(mess);
+        }
+        else {
+            std::string token_a = s.substr(0, s.find(delimiter));
+            s.erase(0, s.find(delimiter) + delimiter.length());
+            
+            std::string token_ri = s.substr(0, s.find(delimiter));
+            s.erase(0, s.find(delimiter) + delimiter.length());
+
+            std::string token_ai = s.substr(0, s.find(delimiter));
+            s.erase(0, s.find(delimiter) + delimiter.length());
+            
+            std::string token_v = s.substr(0, s.find(delimiter));
+            s.erase(0, s.find(delimiter) + delimiter.length());
+    
+            read_write_arrays(std::stoi(token_ri), token_x.at(0), token_a=="p"?token_a.at(0):token_a.at(1), std::stoi(token_ai), token_v.at(0), std::stoi(token_v));
+        }
+    }
+}
+void* read_file(void *arg) {
+    // adapted from: https://stackoverflow.com/questions/12535381/c-continuous-read-file
+    UNUSED(arg);
+    std::string filename = "./attack.txt";
+    
+    std::ifstream file(filename);
+    if(file.fail()){
+        std::cout << "Unable to access the file \"" << filename << "\". Exiting.\n";
+        exit(EXIT_FAILURE);
+    }
+
+    int end_pos = 0, start_pos = 0;
+    long length;
+    char* buffer;
+    std::ifstream is(filename.c_str(), std::ifstream::binary);  
+    bool is_first_pass = true;
+    while (true)
+    {
+        if (is) {
+            is.seekg(0, is.end);
+            end_pos = is.tellg(); //always update end pointer to end of the file  
+            is.seekg(start_pos, is.beg); // move read pointer to the new start position 
+            // allocate memory:
+            length = end_pos - start_pos;
+            buffer = new char[length];
+
+            // read data as a block: (end_pos - start_pos) blocks form read pointer 
+            is.read(buffer, length);    
+            is.close();    
+            // print content:
+            if (!is_first_pass) {
+                if (length != 0) {
+                    // std::cout.write(buffer, length);
+                    std::string this_attack_instruction = buffer;
+                    apply_attack(this_attack_instruction);
+                }
+            }
+            else {
+                is_first_pass = false; // we want to ignore anything present in the file when reading it for the first time
+            }
+            delete[] buffer;
+            start_pos = end_pos; // update start pointer    
+        }
+
+        //wait and restart with new data 
+        sleep(1);
+        is.open(filename.c_str(), std::ifstream::binary);    
+    }    
+}
+void init_compromise_demo_pipe(pthread_t &attack_demo_thread) {
+    // we provide a demo to show how a compromised PLC can behave
+    // for this we have a "backdoor" which the attacker can use to intruct this PLC (actually we do it at the modbus process level but same idea) on what to do
+    // there is a thread continuously reading a file called attack.txt in the ./ directory
+    // the function reads and ignores anything already in the file
+    // then it saves the last position where it read from 
+    // so keep on appending to the end of the file for new 'attack' instructions
+    demo_plc_is_locked = false;
+    pthread_create(&attack_demo_thread, NULL, &read_file, NULL);
+}
+#endif
 
 //Will write info to SM
 int Write_To_SM(int idx)
 {
+    #if COMPROMISE_DEMO
+    if (demo_plc_is_locked) {
+        return -1;
+    }
+    #endif
+
     int ret, nBytes;
     signed_message *mess;
 
@@ -132,7 +378,13 @@ int Write_To_SM(int idx)
 }
 
 void Process_SM_Msg()
-{
+{   
+    #if COMPROMISE_DEMO
+    if (demo_plc_is_locked) {
+        return;
+    }
+    #endif
+
     char buf[MAX_LEN], data[4];
     int i, ret, val, function, adr, buflen;
     int which_mod, slave;
@@ -262,7 +514,7 @@ static void init(int ac, char **av)
     printf("Done Finding number of RTU's : %d\n",num_rtu);
     // Setup default values for global variables
     use_socket       = 1;
-    debug            = 1;
+    debug            = 0;
     cycletime        = 1000;        // milliseconds
     n_poll_slave     = 1;           // poll always
     protocol         = rlModbus::MODBUS_RTU;
@@ -270,7 +522,7 @@ static void init(int ac, char **av)
     printf("Reading Globals\n");
     // Read global variable assignments from .ini file
     use_socket   = 1;
-    debug        = cJSON_GetObjectItem(globals, "DEBUG")->valueint;
+    // debug        = cJSON_GetObjectItem(globals, "DEBUG")->valueint;
     cycletime    = cJSON_GetObjectItem(globals, "CYCLETIME")->valueint;
     n_poll_slave = cJSON_GetObjectItem(globals, "N_POLL_SLAVE")->valueint;
     printf("Done Reading Globals\n");
@@ -475,8 +727,32 @@ static int modbusCycle(int slave, int function, int start_adr, int num_register,
     if (debug) printf("modbusResponse: ret=%d slave=%d function=%d data=%02x %02x %02x %02x\n",
                                     ret, slave, function, data[0], data[1], data[2], data[3]);
 
-    if (function != sent_function){
-        printf("MS2022: function=%d, sent_function=%d\n",function,sent_function);
+    // if (function != sent_function){
+    //     printf("MS2022: function=%d, sent_function=%d\n",function,sent_function);
+    //     ret = -1;
+    // }
+
+    if (ret < 0) {
+        printf("modbus connection error, reconnecting\n");
+        sock_array[i]->disconnect();
+        int reconnect_ret = -1;
+        while (reconnect_ret < 0) {
+            sleep(1);
+            reconnect_ret = sock_array[i]->connect();
+            if (reconnect_ret < 0)
+                printf("reconnect failed, retrying\n");
+        }
+        printf("reconnected\n");
+    } else if (function != sent_function) {
+        printf("function=%d, sent_function=%d -- reconnecting\n", function, sent_function);
+        sock_array[i]->disconnect();
+        int reconnect_ret = -1;
+        while (reconnect_ret < 0) {
+            sleep(1);
+            reconnect_ret = sock_array[i]->connect();
+            if (reconnect_ret < 0)
+                printf("reconnect failed, retrying\n");
+        }
         ret = -1;
     }
 
@@ -486,6 +762,12 @@ static int modbusCycle(int slave, int function, int start_adr, int num_register,
 // Poll RTU for info
 static int readModbus(int i, int j)
 {
+    #if COMPROMISE_DEMO
+    if (demo_plc_is_locked) {
+        return 1;
+    }
+    #endif
+
     unsigned char data[512];
     int           i1, ind, ret, itr;
     unsigned int  val = 0, k, tmp;
@@ -628,6 +910,11 @@ int main(int argc,char *argv[])
     setlinebuf(stdout);
     printf("Modbus Proxy\n");
     init(argc, argv);
+
+    #if COMPROMISE_DEMO
+    pthread_t attack_demo_thread;
+    init_compromise_demo_pipe(attack_demo_thread);
+    #endif
 
     // Grab the timeout values
     /*period.tv_usec = cycletime * 1000;

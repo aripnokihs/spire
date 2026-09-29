@@ -45,6 +45,9 @@
  #
  #
 
+MACRO_DEF_COMPROMISE_DEMO = 0
+DEFINES += -DCOMPROMISE_DEMO=$(MACRO_DEF_COMPROMISE_DEMO)
+
 CC            = gcc
 CXX           = g++
 CFLAGS        += -pipe -O2 -Wall -W -fPIE -g $(DEFINES)
