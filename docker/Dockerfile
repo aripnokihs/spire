@@ -43,6 +43,15 @@ RUN dnf install -y bison autoconf automake cmake # needed by OpenPLC
 RUN dnf install -y qt5-devel qt5-qtwebengine-devel # needed by pvbrowser
 # Compile
 RUN printf 'Y\n1\n' | make libs
+
+
+# RUN uname -m && \
+#     gcc -dumpmachine && \
+#     g++ -dumpmachine && \
+#     gcc --version && \
+#     g++ --version
+
+
 RUN make
 # Run the script to check and generate keys if needed
 RUN python3 /app/spire/docker/check_keys.py

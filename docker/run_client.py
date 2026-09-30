@@ -71,7 +71,14 @@ def main(argv):
             run_cmd(ems_cmd, f"plc_{name}", f"{log_dir}/out_plc_{name}.txt")
 
         for proxy_id in range(17):
-            proxy_cmd = f"cd {base_dir}/proxy && ./proxy {proxy_id} {ip}:8120 1"
+            # proxy_cmd = f"cd {base_dir}/proxy && ./proxy {proxy_id} {ip}:8120 1"
+            proxy_cmd = (
+                f"cd {base_dir}/proxy && "
+                f"./proxy -c rtus_plcs "
+                f"-id {proxy_id} "
+                f"-sd {ip}:8120 "
+                f"-n 1"
+            )
             run_cmd(proxy_cmd, f"proxy_{proxy_id}", f"{log_dir}/out_proxy_{proxy_id}.txt")
 
     # Conditionally launch HMI processes
