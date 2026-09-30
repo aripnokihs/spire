@@ -6,10 +6,10 @@ BINARY_NAME = io_proc_ovation
 
 CC            = gcc
 CXX           = g++
-CFLAGS        += -m64 -pipe -O2 -Wall -W -fPIE -g $(DEFINES)
-CXXFLAGS      += -m64 -pipe -O2 -Wall -W -fPIE -g $(DEFINES)
+CFLAGS        +=   -pipe -O2 -Wall -W -fPIE -g $(DEFINES)
+CXXFLAGS      +=   -pipe -O2 -Wall -W -fPIE -g $(DEFINES)
 LINK          = g++
-LFLAGS        = -m64 -Wl,-O1
+LFLAGS        =   -Wl,-O1
 
 TARGET        = $(BINARY_NAME)
 

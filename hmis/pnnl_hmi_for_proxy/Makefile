@@ -50,8 +50,8 @@ DEFINES += -DCOMPROMISE_DEMO=$(MACRO_DEF_COMPROMISE_DEMO)
 
 CC            = gcc
 CXX           = g++
-CFLAGS        += -m64 -pipe -O2 -Wall -W -fPIE -g $(DEFINES)
-CXXFLAGS      += -m64 -pipe -O2 -Wall -W -fPIE -g $(DEFINES)
+CFLAGS        +=   -pipe -O2 -Wall -W -fPIE -g $(DEFINES)
+CXXFLAGS      +=   -pipe -O2 -Wall -W -fPIE -g $(DEFINES)
 PVB			  = ../../pvb
 PRIME         = ../../prime
 SPINES        = ../../spines
@@ -59,7 +59,7 @@ SPIRE         = ../..
 INCPATH       = -I. -I$(PVB)/pvserver -I$(PRIME)/stdutil/include \
 				-I$(SPINES)/libspines/ -I$(SPIRE)/common -I$(PRIME)/libspread-util/include
 LINK          = g++
-LFLAGS        = -m64 -Wl,-O1
+LFLAGS        =   -Wl,-O1
 LIBS          = $(SUBLIBS) $(PVB)/pvserver/libpvsmt.a -lpthread \
 					$(PRIME)/OpenTC-1.1/TC-lib-1.0/.libs/libTC.a \
 					$(SPINES)/libspines/libspines.a $(PRIME)/stdutil/lib/libstdutil.a \

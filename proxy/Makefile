@@ -1,7 +1,7 @@
 CC            = gcc
 CXX           = g++
-CFLAGS        += -m64 -pipe -O2 -Wall -W -fPIE -g $(DEFINES)
-CXXFLAGS      += -m64 -pipe -O2 -Wall -W -fPIE -g $(DEFINES)
+CFLAGS        += -pipe -O2 -Wall -W -fPIE -g $(DEFINES)
+CXXFLAGS      += -pipe -O2 -Wall -W -fPIE -g $(DEFINES)
 SPIRE         = ../
 PRIME         = $(SPIRE)/prime
 SPINES        = $(SPIRE)/spines
@@ -10,7 +10,7 @@ INCPATH       = -I. \
 				-I$(PRIME)/stdutil/include \
 
 LINK          = g++
-LFLAGS        = -m64 -Wl,-O1
+LFLAGS        = -Wl,-O1
 LIBS          = $(SUBLIBS) -lpthread \
 				$(PRIME)/OpenTC-1.1/TC-lib-1.0/.libs/libTC.a \
 				$(SPINES)/libspines/libspines.a \

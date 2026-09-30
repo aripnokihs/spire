@@ -47,7 +47,7 @@
  
 .PHONY: all clean pnnl_for_proxy
 
-SUBDIRS=jhu_hmi pnnl_hmi heco_3breaker heco_5breaker heco_timing ems_hmi pnnl_hmi_for_proxy jhu_hmi_for_proxy ems_hmi_for_proxy
+SUBDIRS=jhu_hmi pnnl_hmi heco_3breaker heco_5breaker heco_timing ems_hmi pnnl_hmi_for_proxy jhu_hmi_for_proxy ems_hmi_for_proxy ss1_hmi ss2_hmi ss3_hmi cc_hmi
 
 all: $(SUBDIRS)
 	for dir in $(SUBDIRS); do \
