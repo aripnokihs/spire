@@ -26,6 +26,7 @@ SOURCES       = \
         $(SPIRE)/common/tc_wrapper.c \
         $(SPIRE)/common/itrc.c \
 		$(SPIRE)/common/key_value.c \
+		$(SPIRE)/common/key_ip.c \
 		$(SPIRE)/config/cJSON.c \
 		$(SPIRE)/config/config_helpers.c \
 
@@ -37,6 +38,7 @@ OBJECTS       = \
         $(SPIRE)/common/tc_wrapper.o \
         $(SPIRE)/common/itrc.o \
 		$(SPIRE)/common/key_value.o \
+		$(SPIRE)/common/key_ip.o \
 		$(SPIRE)/config/cJSON.o \
 		$(SPIRE)/config/config_helpers.o \
 
@@ -49,6 +51,7 @@ HEADERS       = \
 		$(SPIRE)/common/def.h \
         $(SPIRE)/common/itrc.h \
 		$(SPIRE)/common/key_value.h \
+		$(SPIRE)/common/key_ip.h \
 		$(SPIRE)/config/config_helpers.h \
 		$(SPIRE)/config/cJSON.h \
 
@@ -60,17 +63,6 @@ HEADERS       = \
 .c.o:
 	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(INCPATH) -o "$@" "$<"
 
-INC= -I ../prime/stdutil/include -I ../spines/libspines/ -I ../spines/libspread-util/include/ -I ../libiec61850/.install/include/ -I ../common
-OBJECTS=proxy.o \
-		../common/scada_packets.o \
-		../common/net_wrapper.o \
-		../common/openssl_rsa.o \
-		../common/tc_wrapper.o \
-		../common/itrc.o \
-		../common/key_value.o \
-		../common/key_ip.o \
-		../config/cJSON.o \
-		../config/config_helpers.o
 
 CC_OBJECTS=cc_connector.o \
                 ../common/scada_packets.o \
@@ -86,21 +78,10 @@ CC_OBJECTS=cc_connector.o \
 $(TARGET):  $(OBJECTS)
 	$(LINK) $(LDFLAGS) $(LFLAGS) -o $(TARGET) $(OBJECTS) $(LIBS)
 
-IED_OBJECTS=ied_connector.o \
-                ../common/scada_packets.o \
-                ../common/net_wrapper.o \
-                ../common/openssl_rsa.o \
-                ../common/tc_wrapper.o \
-                ../common/itrc.o \
-                ../common/key_value.o \
-				../common/key_ip.o \
-                ../config/cJSON.o \
-                ../config/config_helpers.o
+clean: 
+	rm -rf $(OBJECTS)
+	rm -rf $(TARGET)
 
 proxy.o: proxy.cpp $(HEADERS)
 	$(CXX) -c $(CXXFLAGS) $(CPPFLAGS) $(INCPATH) -o proxy.o proxy.cpp
 	$(MAKE) -C ./io_process/
-
-clean: 
-	rm -rf $(OBJECTS)
-	rm -rf $(TARGET)

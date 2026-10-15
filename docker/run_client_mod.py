@@ -96,7 +96,13 @@ def main(argv):
             start_plc(rtu_id)
         
         for proxy_id in rtu_ids: # only start proxies for selected plc/rtus
-            proxy_cmd = f"cd {base_dir}/proxy && ./proxy {proxy_id} {ip}:8120 1"
+            proxy_cmd = (
+                f"cd {base_dir}/proxy && "
+                f"./proxy -c rtus_plcs "
+                f"-id {proxy_id} "
+                f"-sd {ip}:8120 "
+                f"-n 1"
+            )
             run_cmd(proxy_cmd, f"proxy_{proxy_id}", f"{log_dir}/out_proxy_{proxy_id}.txt")
 
     # Conditionally launch HMI processes

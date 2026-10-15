@@ -24,7 +24,7 @@ To use your generated config with Docker, you could then run (from the top-level
 ```
 docker build --build-arg CONF_DIR=scripts/conf/<specific_conf_dir> -t spire-img .
 ```
-
+for example:
 ```
 docker build \
   -f docker/Dockerfile \
@@ -36,12 +36,19 @@ and to bring up the config:
 ```
 docker compose -f scripts/conf/<specific_conf_dir>/docker-compose.yml --profile full up -d
 ```
+for example:
+```
+docker compose -f scripts/conf/conf_4m/docker-compose.yml --profile full up -d
+```
 
 and take it down:
 ```
 docker compose -f scripts/conf/<specific_conf_dir>/docker-compose.yml --profile full down
 ```
-
+for example: 
+```
+docker compose -f scripts/conf/conf_4m/docker-compose.yml --profile full down
+```
 ## Examples
 
 Example JSON configurations for 4 and 6 replicas are provided in

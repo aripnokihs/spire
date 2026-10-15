@@ -32,6 +32,7 @@ SOURCES_LIST       = \
         $(SPIRE_DIR)/common/tc_wrapper.c \
         $(SPIRE_DIR)/common/itrc.c \
 		$(SPIRE_DIR)/common/key_value.c \
+		$(SPIRE_DIR)/common/key_ip.c \
 		$(SPIRE_DIR)/config/cJSON.c \
 		$(SPIRE_DIR)/config/config_helpers.c \
 
@@ -43,6 +44,7 @@ OBJECTS_LIST       = \
         $(SPIRE_DIR)/common/tc_wrapper.o \
         $(SPIRE_DIR)/common/itrc.o \
 		$(SPIRE_DIR)/common/key_value.o \
+		$(SPIRE_DIR)/common/key_ip.o \
 		$(SPIRE_DIR)/config/cJSON.o \
 		$(SPIRE_DIR)/config/config_helpers.o \
 
@@ -54,6 +56,7 @@ DEMO_CONF1_OBJECTS_LIST       = \
         $(SPIRE_DIR)/common/tc_wrapper.o \
         $(SPIRE_DIR)/common/itrc.o \
 		$(SPIRE_DIR)/common/key_value.o \
+		$(SPIRE_DIR)/common/key_ip.o \
 		$(SPIRE_DIR)/config/cJSON.o \
 		$(SPIRE_DIR)/config/config_helpers.o \
 
@@ -65,6 +68,7 @@ HEADERS_LIST       = \
 		$(SPIRE_DIR)/common/def.h \
         $(SPIRE_DIR)/common/itrc.h \
 		$(SPIRE_DIR)/common/key_value.h \
+		$(SPIRE_DIR)/common/key_ip.h \
 		$(SPIRE_DIR)/config/config_helpers.h \
 		$(SPIRE_DIR)/config/cJSON.h \
 
