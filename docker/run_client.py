@@ -57,17 +57,17 @@ def main(argv):
     # Conditionally launch proxy/plc processes
     if args.type == 'plc':
         """This part for activating pnnl"""
-        # pnnl_cmd = f"cd {base_dir}/plcs/pnnl_plc && ./openplc -m 502 -d 20000"
-        # run_cmd(pnnl_cmd, f"plc_pnnl", f"{log_dir}/out_plc_pnnl.txt")
+        pnnl_cmd = f"cd {base_dir}/plcs/pnnl_plc && ./openplc -m 502 -d 20000"
+        run_cmd(pnnl_cmd, f"plc_pnnl", f"{log_dir}/out_plc_pnnl.txt")
 
-        # proxy_cmd = (
-        #     f"cd {base_dir}/proxy && "
-        #     f"./proxy -c rtus_plcs "
-        #     f"-id 10 "
-        #     f"-sd {ip}:8120 "
-        #     f"-n 1"
-        # )
-        # run_cmd(proxy_cmd, f"proxy_10", f"{log_dir}/out_proxy_10.txt")
+        proxy_cmd = (
+            f"cd {base_dir}/proxy && "
+            f"./proxy -c rtus_plcs "
+            f"-id 10 "
+            f"-sd {ip}:8120 "
+            f"-n 1"
+        )
+        run_cmd(proxy_cmd, f"proxy_10", f"{log_dir}/out_proxy_10.txt")
         
         """This part for activating jhu"""
         for jhu_id in range(10):
@@ -85,22 +85,22 @@ def main(argv):
             run_cmd(proxy_cmd, f"proxy_{proxy_id}", f"{log_dir}/out_proxy_{proxy_id}.txt")
 
         """This part for activating ems"""
-        # for ems_id in range(3):
-        #     ems_cmd = f"cd {base_dir}/plcs/ems{ems_id} && ./openplc -m {513+ems_id} -d {20011+ems_id}"
-        #     run_cmd(ems_cmd, f"plc_ems_{ems_id}", f"{log_dir}/out_plc_ems_{ems_id}.txt")
-        # for ems_id, name in enumerate(["ems_hydro", "ems_solar", "ems_wind"]):
-        #     ems_cmd = f"cd {base_dir}/plcs/{name} && ./openplc -m {516+ems_id} -d {20014+ems_id}"
-        #     run_cmd(ems_cmd, f"plc_{name}", f"{log_dir}/out_plc_{name}.txt")
+        for ems_id in range(3):
+            ems_cmd = f"cd {base_dir}/plcs/ems{ems_id} && ./openplc -m {513+ems_id} -d {20011+ems_id}"
+            run_cmd(ems_cmd, f"plc_ems_{ems_id}", f"{log_dir}/out_plc_ems_{ems_id}.txt")
+        for ems_id, name in enumerate(["ems_hydro", "ems_solar", "ems_wind"]):
+            ems_cmd = f"cd {base_dir}/plcs/{name} && ./openplc -m {516+ems_id} -d {20014+ems_id}"
+            run_cmd(ems_cmd, f"plc_{name}", f"{log_dir}/out_plc_{name}.txt")
 
-        # for proxy_id in range(11, 17):
-        #     proxy_cmd = (
-        #         f"cd {base_dir}/proxy && "
-        #         f"./proxy -c rtus_plcs "
-        #         f"-id {proxy_id} "
-        #         f"-sd {ip}:8120 "
-        #         f"-n 1"
-        #     )
-        #     run_cmd(proxy_cmd, f"proxy_{proxy_id}", f"{log_dir}/out_proxy_{proxy_id}.txt")
+        for proxy_id in range(11, 17):
+            proxy_cmd = (
+                f"cd {base_dir}/proxy && "
+                f"./proxy -c rtus_plcs "
+                f"-id {proxy_id} "
+                f"-sd {ip}:8120 "
+                f"-n 1"
+            )
+            run_cmd(proxy_cmd, f"proxy_{proxy_id}", f"{log_dir}/out_proxy_{proxy_id}.txt")
 
 
     # Conditionally launch HMI processes
@@ -110,16 +110,16 @@ def main(argv):
         #     run_cmd(hmi_cmd, f"{name}", f"{log_dir}/out_{name}.txt")
             
         """pnnl hmi"""
-        # hmi_cmd = f"cd hmis/pnnl_hmi && ./pnnl_hmi {ip}:8120 -port=5052"
-        # run_cmd(hmi_cmd, f"pnnl_hmi", f"{log_dir}/out_pnnl_hmi.txt")
+        hmi_cmd = f"cd hmis/pnnl_hmi && ./pnnl_hmi {ip}:8120 -port=5052"
+        run_cmd(hmi_cmd, f"pnnl_hmi", f"{log_dir}/out_pnnl_hmi.txt")
         
         """jhu hmi"""
         hmi_cmd = f"cd hmis/jhu_hmi && ./jhu_hmi {ip}:8120 -port=5051"
         run_cmd(hmi_cmd, f"jhu_hmi", f"{log_dir}/out_jhu_hmi.txt")
         
         """ems hmi"""
-        # hmi_cmd = f"cd hmis/ems_hmi && ./ems_hmi {ip}:8120 -port=5053"
-        # run_cmd(hmi_cmd, f"ems_hmi", f"{log_dir}/out_ems_hmi.txt")
+        hmi_cmd = f"cd hmis/ems_hmi && ./ems_hmi {ip}:8120 -port=5053"
+        run_cmd(hmi_cmd, f"ems_hmi", f"{log_dir}/out_ems_hmi.txt")
     # Conditionally launch reconfiguration processes
     if args.reconf:
         spines_ctrl_cmd = f"cd {base_dir}/spines/daemon && ./spines -p 8900 -c spines_ctrl.conf"

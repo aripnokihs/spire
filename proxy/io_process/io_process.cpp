@@ -151,9 +151,10 @@ void _itrc_init_plcrtu(std::string spinesd_ip_addr, int spinesd_port, system_ns:
     // Seq_Num = 1;
     
     system_ns::Type = RTU_TYPE;
+    system_ns::My_ID = proxy_id_for_itrc;
     system_ns::Prime_Client_ID = MAX_NUM_SERVER_SLOTS + system_ns::My_ID;
     system_ns::My_IP = system_ns::getIP();
-    system_ns::My_ID = proxy_id_for_itrc;
+
 
     // Setup IPC for the RTU Proxy main thread
     printf("PROXY: Setting up IPC for RTU proxy thread (in io_proc)\n");
