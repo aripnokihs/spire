@@ -70,6 +70,7 @@ SOURCES       = jhu_hmi.cpp \
         $(SPIRE)/common/tc_wrapper.c \
         $(SPIRE)/common/itrc.c \
 		$(SPIRE)/common/key_value.c \
+		$(SPIRE)/common/key_ip.c \
 		$(SPIRE)/config/cJSON.c \
 		$(SPIRE)/config/config_helpers.c 
 OBJECTS       = jhu_hmi.o \
@@ -81,6 +82,7 @@ OBJECTS       = jhu_hmi.o \
         $(SPIRE)/common/tc_wrapper.o \
         $(SPIRE)/common/itrc.o \
 		$(SPIRE)/common/key_value.o \
+		$(SPIRE)/common/key_ip.o \
 		$(SPIRE)/config/cJSON.o \
 		$(SPIRE)/config/config_helpers.o
 TARGET        = jhu_hmi
@@ -99,6 +101,7 @@ HEADERS       = pvapp.h \
 		$(SPIRE)/common/def.h \
         $(SPIRE)/common/itrc.h \
 		$(SPIRE)/common/key_value.h \
+		$(SPIRE)/common/key_ip.h \
 		$(SPIRE)/config/config_helpers.h \
 		$(SPIRE)/config/cJSON.h
 

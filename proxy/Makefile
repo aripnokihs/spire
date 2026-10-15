@@ -60,6 +60,17 @@ HEADERS       = \
 .c.o:
 	$(CC) -c $(CFLAGS) $(CPPFLAGS) $(INCPATH) -o "$@" "$<"
 
+INC= -I ../prime/stdutil/include -I ../spines/libspines/ -I ../spines/libspread-util/include/ -I ../libiec61850/.install/include/ -I ../common
+OBJECTS=proxy.o \
+		../common/scada_packets.o \
+		../common/net_wrapper.o \
+		../common/openssl_rsa.o \
+		../common/tc_wrapper.o \
+		../common/itrc.o \
+		../common/key_value.o \
+		../common/key_ip.o \
+		../config/cJSON.o \
+		../config/config_helpers.o
 
 CC_OBJECTS=cc_connector.o \
                 ../common/scada_packets.o \
@@ -68,16 +79,28 @@ CC_OBJECTS=cc_connector.o \
                 ../common/tc_wrapper.o \
                 ../common/itrc.o \
                 ../common/key_value.o \
+				../common/key_ip.o \
                 ../config/cJSON.o \
                 ../config/config_helpers.o
 
 $(TARGET):  $(OBJECTS)
 	$(LINK) $(LDFLAGS) $(LFLAGS) -o $(TARGET) $(OBJECTS) $(LIBS)
 
-clean: 
-	rm -rf $(OBJECTS)
-	rm -rf $(TARGET)
+IED_OBJECTS=ied_connector.o \
+                ../common/scada_packets.o \
+                ../common/net_wrapper.o \
+                ../common/openssl_rsa.o \
+                ../common/tc_wrapper.o \
+                ../common/itrc.o \
+                ../common/key_value.o \
+				../common/key_ip.o \
+                ../config/cJSON.o \
+                ../config/config_helpers.o
 
 proxy.o: proxy.cpp $(HEADERS)
 	$(CXX) -c $(CXXFLAGS) $(CPPFLAGS) $(INCPATH) -o proxy.o proxy.cpp
 	$(MAKE) -C ./io_process/
+
+clean: 
+	rm -rf $(OBJECTS)
+	rm -rf $(TARGET)

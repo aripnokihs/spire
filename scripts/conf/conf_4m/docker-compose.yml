@@ -1,0 +1,106 @@
+networks:
+  spire-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.101.0/24
+          gateway: 192.168.101.1
+    name: spire-net
+
+services:
+  spire1:
+    image: spire-img
+    pull_policy: never
+    container_name: spire1
+    networks:
+      spire-net:
+        ipv4_address: 192.168.101.101
+    cap_add:
+      - NET_ADMIN
+    command: python docker/run_replica.py -id 1 -ip 192.168.101.101
+
+  spire2:
+    image: spire-img
+    pull_policy: never
+    container_name: spire2
+    networks:
+      spire-net:
+        ipv4_address: 192.168.101.102
+    cap_add:
+      - NET_ADMIN
+    command: python docker/run_replica.py -id 2 -ip 192.168.101.102
+
+  spire3:
+    image: spire-img
+    pull_policy: never
+    container_name: spire3
+    networks:
+      spire-net:
+        ipv4_address: 192.168.101.103
+    cap_add:
+      - NET_ADMIN
+    command: python docker/run_replica.py -id 3 -ip 192.168.101.103
+
+  spire4:
+    image: spire-img
+    pull_policy: never
+    container_name: spire4
+    networks:
+      spire-net:
+        ipv4_address: 192.168.101.104
+    cap_add:
+      - NET_ADMIN
+    command: python docker/run_replica.py -id 4 -ip 192.168.101.104
+
+  benchmark-client:
+    image: spire-img
+    pull_policy: never
+    profiles:
+      - benchmark
+    container_name: spire-benchmark
+    cap_add:
+      - NET_ADMIN
+    command: python docker/run_client_mod.py --type=benchmark --id=0
+
+  plc-client-0:
+    image: spire-img
+    pull_policy: never
+    profiles:
+      - full
+    container_name: spire-plc-0
+    networks:
+      spire-net:
+        ipv4_address: 192.168.101.107
+    cap_add:
+      - NET_ADMIN
+    command: python docker/run_client_mod.py --type=plc --id=0 --rtus=0,1,2,3,4 -ip=192.168.101.107
+
+  plc-client-1:
+    image: spire-img
+    pull_policy: never
+    profiles:
+      - full
+    container_name: spire-plc-1
+    networks:
+      spire-net:
+        ipv4_address: 192.168.101.108
+    cap_add:
+      - NET_ADMIN
+    command: python docker/run_client_mod.py --type=plc --id=1 --rtus=5,6,7,8,9,10,11,12,13,14,15,16,17,18,19 -ip=192.168.101.108
+
+  hmi-client:
+    image: spire-img
+    pull_policy: never
+    profiles:
+      - full
+    container_name: spire-hmi
+    networks:
+      spire-net:
+        ipv4_address: 192.168.101.109
+    ports:
+      - "5051:5051"
+      - "5052:5052"
+      - "5053:5053"
+    cap_add:
+      - NET_ADMIN
+    command: python docker/run_client_mod.py --type=hmi --id=2 -ip=192.168.101.109

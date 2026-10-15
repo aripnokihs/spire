@@ -71,6 +71,8 @@
 #include "../config/config_helpers.h"
 #include "key_value.h"
 // #include "stdutil/stddll.h" // temp for attack demo on itrc-based sm: uncomment this
+#include "key_ip.h"
+#include "stdutil/stddll.h"
 
 /* These are flags used in the TC queue */
 #define NORMAL_ORD 1
@@ -827,6 +829,7 @@ void *ITRC_Master(void *data)
 
     /* Parse JSON to make ds for corresponding sub for rtu */
     key_value_init();
+    key_ip_init();
     char * buffer = config_into_buffer();
     cJSON * root = cJSON_Parse(buffer);
     free(buffer);
@@ -840,6 +843,12 @@ void *ITRC_Master(void *data)
             int rtu_id = cJSON_GetObjectItem(rtu, "ID")->valueint;
             //printf("Adding %d, %d to KEY_VALUE STORE\n", rtu_id, loc_num);
             key_value_insert(rtu_id, loc_num);
+
+            // Add rtu's configured ip to a specifc data structure
+            char *config_ip = cJSON_GetObjectItem(rtu, "IP")->valuestring;
+            char *config_ip_dup = strdup(config_ip);
+            key_ip_insert(rtu_id, config_ip_dup);
+        
         }
     }
 
@@ -1847,6 +1856,8 @@ int ITRC_Send_TC_Final(int sp_ext_sk, signed_message *mess)
     hmi_update_msg *hmiu;
     benchmark_msg *ben;
 
+    char *spines_rtu_addr_ip;
+
     tcf = (tc_final_msg *)(mess + 1);
     scada_mess = (signed_message *)(tcf->payload);
 
@@ -1858,8 +1869,15 @@ int ITRC_Send_TC_Final(int sp_ext_sk, signed_message *mess)
             printf("\nrtu:%d has no loc, dropping msg\n", rtuf->sub);
             return 0;
         }
+
+        in_list = key_ip_get(rtuf->sub, &spines_rtu_addr_ip);
+        if(!in_list) {
+            printf("\nrtu:%d has no loc, dropping msg\n", rtuf->sub);
+            return 0;
+        }
         dest.sin_port = htons(RTU_BASE_PORT + loc);
-        dest.sin_addr.s_addr = inet_addr(SPINES_RTU_ADDR);
+        dest.sin_addr.s_addr = inet_addr(spines_rtu_addr_ip);
+        // dest.sin_addr.s_addr = inet_addr(SPINES_RTU_ADDR);
         dest.sin_family = AF_INET;
 	if(loc>=SUBSTATION_RTU_ID_BASE && loc<NUM_RTU){
 	//TODO: for loop send and return

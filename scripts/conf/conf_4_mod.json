@@ -1,0 +1,56 @@
+{
+  "conf_suffix": "4m",
+  "num_f": 1,
+  "num_k": 0,
+  "sites": [
+    {
+      "name": "site1",
+      "type": "control_center",
+      "hosts": [
+        { "name": "host1", "ip": "192.168.101.101" }
+      ]
+    },
+    {
+      "name": "site2",
+      "type": "control_center",
+      "hosts": [
+        { "name": "host2", "ip": "192.168.101.102" }
+      ]
+    },
+    {
+      "name": "site3",
+      "type": "control_center",
+      "hosts": [
+        { "name": "host3", "ip": "192.168.101.103" }
+      ]
+    },
+    {
+      "name": "site4",
+      "type": "control_center",
+      "hosts": [
+        { "name": "host4", "ip": "192.168.101.104" }
+      ]
+    }
+  ],
+  "proxies": [
+    {
+      "host": "host7",
+      "ip": "192.168.101.107",
+      "rtus": [0, 1, 2, 3, 4]
+    },
+    {
+      "host": "host8",
+      "ip": "192.168.101.108",
+      "rtus": [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+    }
+  ],
+  "hmi": {
+    "host": "host9",
+    "ip": "192.168.101.109"
+  },
+  "base_files": {
+    "spines": "base_files/spines.conf",
+    "prime_def": "base_files/prime_def.h",
+    "scada_def": "base_files/scada_def.h"
+  }
+}
