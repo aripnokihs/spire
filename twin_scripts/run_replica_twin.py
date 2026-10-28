@@ -1,6 +1,6 @@
 import sys, argparse, subprocess, time, os
 
-base_dir = "/app/spire"
+base_dir = "/twins/spireA"
 log_dir = f"{base_dir}/logs"
 
 def get_args(argv):
@@ -9,7 +9,7 @@ def get_args(argv):
     parser.add_argument('-ip', required=False, type=str, help='Replica IP (default: 192.168.101.{100+ID})')
     parser.add_argument('--reconf', '-r', action='store_true', help='Enable reconfiguration support by running the Spines control network and Config Agent')
     parser.add_argument('-twin', required=True, type=str, help='Twin ID (A, B, C, ...)')
-    return parser.parse_args()
+    return parser.parse_args(argv)
 
 def run_cmd(cmd: str, tag: str, log_file: str) -> subprocess.Popen:
     """Run shell command, prefixing each line with [tag] before streaming to stdout and log file."""
@@ -34,7 +34,7 @@ def main(argv):
     port_padding = int(ord(dir_letter) - 65) # A -> 0
     
     # Update dir as correct one
-    base_dir = f"/app/spire{dir_letter}"
+    base_dir = f"/twins/spire{dir_letter}"
     log_dir = f"{base_dir}/logs"
 
     # Set up commands for Spire replica processes

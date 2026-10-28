@@ -3,7 +3,7 @@ Modifications are currently ignoring benchmark and controls spines.
 """
 import sys, argparse, subprocess, time, os
 
-base_dir = "/app/spire"
+base_dir = "/twins/spireA"
 log_dir = f"{base_dir}/logs"
 
 def get_args(argv):
@@ -83,11 +83,11 @@ def main(argv):
     # Specify which digital twin it is, default is twin A
     if args.twin:
         dir_letter = args.twin
-        base_dir = f"/app/spire{dir_letter}"
+        base_dir = f"/twins/spire{dir_letter}"
         log_dir = f"{base_dir}/logs"
     else:
         dir_letter = 'A'
-        base_dir = "/app/spireA"
+        base_dir = "/twins/spireA"
         log_dir = f"{base_dir}/logs"
 
     if args.rtus:
@@ -122,7 +122,7 @@ def main(argv):
         for twin in range(twin_num):
             log_dir_letter = chr(ord('A') + twin)
             padded_port = 10000*twin
-            spines_base_dir = f"/app/spire{log_dir_letter}"
+            spines_base_dir = f"/twins/spire{log_dir_letter}"
             spines_ext_cmd = f"cd {spines_base_dir}/spines/daemon && ./spines -p {8120+padded_port} -c spines_ext.conf -I {ip}"
             proc = run_cmd(spines_ext_cmd, f"spines_ext_{args.type}", f"{log_dir}/out_spines_ext_{args.type}{log_dir_letter}.txt")
             sp_procs.append(proc)
@@ -138,7 +138,7 @@ def main(argv):
                 f"./proxy -c rtus_plcs "
                 f"-id {proxy_id} "
                 f"-sd {ip}:8120 "
-                f"-dt twins.txt "
+                f"-dt twins-{args.id}.txt "
                 f"-n 1"
             )
             run_cmd(proxy_cmd, f"proxy_{proxy_id}", f"{log_dir}/out_proxy_{proxy_id}.txt")
@@ -146,14 +146,14 @@ def main(argv):
     # Conditionally launch HMI processes
     if args.type == 'hmi':
         port_padding = 10000 * (ord(dir_letter) - 65)
-        spines_base_dir = f"/app/spire{dir_letter}"
+        spines_base_dir = f"/twins/spire{dir_letter}"
         spines_ext_cmd = f"cd {spines_base_dir}/spines/daemon && ./spines -p {8120+port_padding} -c spines_ext.conf -I {ip}"
         proc = run_cmd(spines_ext_cmd, f"spines_ext_{args.type}", f"{log_dir}/out_spines_ext_{args.type}.txt")
         sp_procs.append(proc)
         
         time.sleep(2)
         
-        hmi_base_dir = f"/app/spire{dir_letter}"
+        hmi_base_dir = f"/twins/spire{dir_letter}"
         for hmi_id, name in enumerate(["jhu_hmi", "pnnl_hmi", "ems_hmi"]):
             hmi_cmd = f"cd {hmi_base_dir}/hmis/{name} && ./{name} {ip}:{8120+port_padding} -port={5051+hmi_id}"
             run_cmd(hmi_cmd, f"{name}", f"{log_dir}/out_{name}.txt")

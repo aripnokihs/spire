@@ -161,16 +161,16 @@ void _itrc_init_plcrtu(std::string spinesd_ip_addr, int spinesd_port, system_ns:
     memset(&itrc_data_main, 0, sizeof(system_ns::itrc_data));
     sprintf(itrc_data_main.prime_keys_dir, "%s", proxy_prime_keys_dir.c_str());
     sprintf(itrc_data_main.sm_keys_dir, "%s", proxy_sm_keys_dir.c_str());
-    sprintf(itrc_data_main.ipc_local, "%s%d", ssproxy_ipc_main_procfile.c_str(), system_ns::My_ID);
-    sprintf(itrc_data_main.ipc_remote, "%s%d", ssproxy_ipc_itrc_procfile.c_str(), system_ns::My_ID);
+    sprintf(itrc_data_main.ipc_local, "%s_%s", ssproxy_ipc_main_procfile.c_str(), ipc_path_suffix.c_str());
+    sprintf(itrc_data_main.ipc_remote, "%s_%s", ssproxy_ipc_itrc_procfile.c_str(), ipc_path_suffix.c_str());
     sock_main_to_itrc_thread = system_ns::IPC_DGram_Sock(itrc_data_main.ipc_local);
 
     // Setup IPC for the Worker Thread (running the ITRC Client)
     memset(&itrc_data_itrcclient, 0, sizeof(system_ns::itrc_data));
     sprintf(itrc_data_itrcclient.prime_keys_dir, "%s", proxy_prime_keys_dir.c_str());
     sprintf(itrc_data_itrcclient.sm_keys_dir, "%s", proxy_sm_keys_dir.c_str());
-    sprintf(itrc_data_itrcclient.ipc_local, "%s%d", ssproxy_ipc_itrc_procfile.c_str(), system_ns::My_ID);
-    sprintf(itrc_data_itrcclient.ipc_remote, "%s%d", ssproxy_ipc_main_procfile.c_str(), system_ns::My_ID);
+    sprintf(itrc_data_itrcclient.ipc_local, "%s_%s", ssproxy_ipc_itrc_procfile.c_str(), ipc_path_suffix.c_str());
+    sprintf(itrc_data_itrcclient.ipc_remote, "%s_%s", ssproxy_ipc_main_procfile.c_str(), ipc_path_suffix.c_str());
     sprintf(itrc_data_itrcclient.spines_ext_addr, "%s", spinesd_ip_addr.c_str());
     sscanf(std::to_string(spinesd_port).c_str(), "%d", &itrc_data_itrcclient.spines_ext_port);   
 }
@@ -194,8 +194,8 @@ void _itrc_init_hmi(std::string spinesd_ip_addr, int spinesd_port, system_ns::it
     memset(&itrc_data_main, 0, sizeof(system_ns::itrc_data));
     sprintf(itrc_data_main.prime_keys_dir, "%s", hmi_prime_keys_dir.c_str());
     sprintf(itrc_data_main.sm_keys_dir, "%s", hmi_sm_keys_dir.c_str());
-    sprintf(itrc_data_main.ipc_local, "%s%d", hmiproxy_ipc_main_procfile.c_str(), system_ns::My_ID);
-    sprintf(itrc_data_main.ipc_remote, "%s%d", hmiproxy_ipc_itrc_procfile.c_str(), system_ns::My_ID);
+    sprintf(itrc_data_main.ipc_local, "%s_%s", hmiproxy_ipc_main_procfile.c_str(), ipc_path_suffix.c_str());
+    sprintf(itrc_data_main.ipc_remote, "%s_%s", hmiproxy_ipc_itrc_procfile.c_str(), ipc_path_suffix.c_str());
 
     sock_main_to_itrc_thread = system_ns::IPC_DGram_Sock(itrc_data_main.ipc_local);
 
@@ -203,8 +203,8 @@ void _itrc_init_hmi(std::string spinesd_ip_addr, int spinesd_port, system_ns::it
     memset(&itrc_data_itrcclient, 0, sizeof(system_ns::itrc_data));
     sprintf(itrc_data_itrcclient.prime_keys_dir, "%s", hmi_prime_keys_dir.c_str());
     sprintf(itrc_data_itrcclient.sm_keys_dir, "%s", hmi_sm_keys_dir.c_str());
-    sprintf(itrc_data_itrcclient.ipc_local, "%s%d", hmiproxy_ipc_itrc_procfile.c_str(), system_ns::My_ID);
-    sprintf(itrc_data_itrcclient.ipc_remote, "%s%d", hmiproxy_ipc_main_procfile.c_str(), system_ns::My_ID);
+    sprintf(itrc_data_itrcclient.ipc_local, "%s_%s", hmiproxy_ipc_itrc_procfile.c_str(), ipc_path_suffix.c_str());
+    sprintf(itrc_data_itrcclient.ipc_remote, "%s_%s", hmiproxy_ipc_main_procfile.c_str(), ipc_path_suffix.c_str());
     sprintf(itrc_data_itrcclient.spines_ext_addr, "%s", spinesd_ip_addr.c_str());
     sscanf(std::to_string(spinesd_port).c_str(), "%d", &itrc_data_itrcclient.spines_ext_port);
 }

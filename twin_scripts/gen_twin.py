@@ -1,5 +1,6 @@
 """
 Generate two sets of config for spireA and spireB for digital twins,
+dt configuration file for io_process and proxy,
 as well as the overall docker compose configuration file.
 """
 #!/usr/bin/env python3
@@ -9,6 +10,9 @@ import re
 import shutil
 import sys
 from pathlib import Path
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+TWINS_DIR = SCRIPT_DIR.parent / "twins"
 
 def replace_defines(file_path: Path, replacements: dict):
     """Replaces single-line C-style #define statements in target header files."""
@@ -64,6 +68,43 @@ def get_rtu_template(rtu_proxy_map: dict[int, str]) -> dict:
     }
     return rtu_config
 
+def generate_dockerfile(num_twins, conf_suffix):
+    blocks = []
+    
+    # Add letter index to twins from docker/Dockerfile
+    # Build all containers separately first
+    for twin in range(num_twins):
+        letter = chr(ord('A') + twin)
+        source = (TWINS_DIR / f"spire{letter}/docker/Dockerfile").read_text()
+        for stage in ("base", "core", "full"):
+            source = re.sub(rf"\bAS {stage}\b", f"AS {stage}_{letter.lower()}", source)
+            source = re.sub(rf"\bFROM {stage}\b", f"FROM {stage}_{letter.lower()}", source)
+        source = source.replace("COPY . /app/spire", f"COPY spire{letter} /app/spire")
+        source = re.sub(r"^ARG CONF_DIR=.*$",
+                        f"ARG CONF_DIR_{letter}=scripts/conf/conf_{conf_suffix}{letter}\nARG CONF_DIR=${{CONF_DIR_{letter}}}",
+                        source, flags=re.MULTILINE)
+        blocks.append(source)
+    
+    # Build final container as /twin, which contains all the previous twins in different directories
+    blocks.append("FROM full_a AS twins\nRUN mkdir -p /twins && mv /app/spire /twins/spireA && rmdir /app\n")
+    for twin in range(1, num_twins):
+        letter = chr(ord('A') + twin)
+        blocks.append(f"COPY --from=full_{letter.lower()} /app/spire /twins/spire{letter}\n")
+        
+    # Recompile io_process.cpp to satisfy twin compile requirements
+    blocks.append("WORKDIR /twins/spireA/proxy/io_process\n")
+    blocks.append("RUN rm -f io_process.o io_process && make SPIRE_DIR=../../ BINARY_NAME=io_process SPIRE_ROOT_DIR_REL_TO_PROXY=../\n")
+    for twin in range(1, num_twins):
+        letter = chr(ord('A') + twin)
+        blocks.append(f"RUN rm -f io_process_{letter}.o io_process_{letter} && make SPIRE_DIR=../../../spire{letter}/ BINARY_NAME=io_process_{letter} SPIRE_ROOT_DIR_REL_TO_PROXY=../../spire{letter}/\n")
+    blocks.append("WORKDIR /twins/spireA\n")
+    dockerfile = "\n".join(blocks)
+    
+    # Export file to two locations
+    (TWINS_DIR / "Dockerfile").write_text(dockerfile)
+    (SCRIPT_DIR / "Dockerfile.twins").write_text(dockerfile)
+
+
 def main():
     config_file = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("config.json")
     if not config_file.exists():
@@ -74,21 +115,25 @@ def main():
         cfg = json.load(f)
 
 
-    num_twins = int(sys.argv[2])
+    num_twins = int(sys.argv[2]) if len(sys.argv) > 2 else 1
     
-    if int(num_twins) > 8:
-        print("Currently support up to 8 twins")
+    if not 1 <= num_twins <= 6:
+        print("The 10000-port offset supports 1–6 twins (ports must be below 65536)")
         sys.exit(1)
     
     for twin in range(num_twins):
         dir_letter = chr(ord('A') + twin)
-        out_dir = Path(f"../twins/spire{dir_letter}/scripts/conf/conf_{cfg['conf_suffix']}{dir_letter}")
+        out_dir = TWINS_DIR / f"spire{dir_letter}/scripts/conf/conf_{cfg['conf_suffix']}{dir_letter}"
         
         # if out_dir.exists():
         #     print(f"Output directory {out_dir} already exists!")
         #     sys.exit(0)
             
         out_dir.mkdir(parents=True, exist_ok=True)
+
+        # Put execution scripts to /spireX/docker
+        for script in ("run_client_twin.py", "run_replica_twin.py"):
+            shutil.copy(SCRIPT_DIR / script, TWINS_DIR / f"spire{dir_letter}/docker" / script)
             
         # Partition sites into Control Centers and Data Centers
         raw_sites = cfg.get("sites", [])
@@ -130,7 +175,7 @@ def main():
         
         # 2. Generate spines_int.conf
         spines_int = out_dir / "spines_int.conf"
-        shutil.copy(Path(cfg["base_files"]["spines"]), spines_int)
+        shutil.copy(SCRIPT_DIR / cfg["base_files"]["spines"], spines_int)
 
         hosts_int = ["Hosts {\n"] + [f"    {i + 1} {str(ipaddress.IPv4Address(s['hosts'][0]['ip']) + 100*twin)}\n" for i, s in enumerate(sites)] + ["}\n\nEdges {\n"]
         for i in range(1, num_sites + 1):
@@ -143,7 +188,7 @@ def main():
         
         # 3. Generate spines_ext.conf
         spines_ext = out_dir / "spines_ext.conf"
-        shutil.copy(Path(cfg["base_files"]["spines"]), spines_ext)
+        shutil.copy(SCRIPT_DIR / cfg["base_files"]["spines"], spines_ext)
 
         hosts_ext = ["Hosts {\n"]
         for i, s in enumerate(cc_sites):
@@ -165,7 +210,7 @@ def main():
             
         # 4. Generate spines_ctrl.conf
         spines_ctrl = out_dir / "spines_ctrl.conf"
-        shutil.copy(Path(cfg["base_files"]["spines"]), spines_ctrl)
+        shutil.copy(SCRIPT_DIR / cfg["base_files"]["spines"], spines_ctrl)
 
         ctrl_ips = [str(ipaddress.IPv4Address(s["hosts"][0]["ip"]) + 100*twin) for s in sites] + proxy_ips + [str(ipaddress.IPv4Address(cfg["hmi"]["ip"]) + 100*twin)]
         total_ctrl_nodes = len(ctrl_ips)
@@ -185,15 +230,18 @@ def main():
             
         # 5. Generate prime_def.h
         prime_def = out_dir / "prime_def.h"
-        shutil.copy(Path(cfg["base_files"]["prime_def"]), prime_def)
+        shutil.copy(SCRIPT_DIR / cfg["base_files"]["prime_def"], prime_def)
         replace_defines(prime_def, {
             "NUM_F": cfg["num_f"],
-            "NUM_K": cfg["num_k"]
+            "NUM_K": cfg["num_k"],
+            "SPINES_PORT": 8100 + 10000*twin,
+            "SPINES_EXT_PORT": 8120 + 10000*twin,
+            "CONFIGUATION_SPINES_PORT": 8900 + 10000*twin
         })
         
         # 6. Generate scada_def.h
         scada_def = out_dir / "scada_def.h"
-        shutil.copy(Path(cfg["base_files"]["scada_def"]), scada_def)
+        shutil.copy(SCRIPT_DIR / cfg["base_files"]["scada_def"], scada_def)
         
         replace_defines(scada_def, {
             "NUM_SM": total_rep,
@@ -203,6 +251,9 @@ def main():
             "NUM_CC_REPLICA": cc_rep,
             "NUM_SITES": num_sites,
             "NUM_CC_CONNECTORS": len(proxy_ips)+1,
+            "SPINES_INT_PORT": 8100 + 10000*twin,
+            "SPINES_EXT_PORT": 8120 + 10000*twin,
+            "SPINES_CTRL_PORT": 8900 + 10000*twin,
             "SPINES_HMI_ADDR": f'"{str(ipaddress.IPv4Address(cfg["hmi"]["ip"]) + twin*100)}"' # added to specify hmi addr
         })
 
@@ -230,7 +281,7 @@ def main():
 
 
     # Prepare out_dir again for docker_compose.yml, in the first spire directory
-    out_dir = Path(f"../twins/spireA/scripts/conf/conf_twins")
+    out_dir = TWINS_DIR / "spireA/scripts/conf/conf_twins"
     
     # if out_dir.exists():
     #     print(f"Output directory {out_dir} already exists!")
@@ -272,6 +323,7 @@ def main():
                 f"    image: spire-img\n"
                 f"    pull_policy: never\n"
                 f"    container_name: spire{rep_id}{dir_letter}\n"
+                f"    working_dir: /twins/spire{dir_letter}\n"
                 f"    networks:\n"
                 f"      spire-net:\n"
                 f"        ipv4_address: {ip}\n"
@@ -281,10 +333,24 @@ def main():
             )
 
 
+    # Read dt file header, no validation
+    dt_header = (SCRIPT_DIR / cfg["base_files"].get("twin", "base_files/twin.txt")).read_text().strip()
+
     # One PLC/proxy container per configured proxy
     for proxy_id, proxy in enumerate(proxies):
         proxy_ip = proxy["ip"]
         rtu_ids = ",".join(str(rtu_id) for rtu_id in proxy["rtus"])
+        
+        # Write dt file with ip and port for each spines daemon (mapped to twins)
+        dt_lines = [dt_header]
+        for twin in range(num_twins):
+            letter = chr(ord('A') + twin)
+            binary = "io_process" if twin == 0 else f"io_process_{letter}"
+            dt_lines.append(f"spire{letter} ./io_process/{binary} {proxy_ip}:{8120+10000*twin}")
+            
+        # Directly write dt file to the proxy folder to simplify compiling
+        (TWINS_DIR / f"spireA/proxy/twins-{proxy_id}.txt").write_text("\n".join(dt_lines) + "\n")
+
 
         dc_services.append(
             f"  plc-client-{proxy_id}:\n"
@@ -293,6 +359,7 @@ def main():
             f"    profiles:\n"
             f"      - full\n"
             f"    container_name: spire-plc-{proxy_id}\n"
+            f"    working_dir: /twins/spireA\n"
             f"    networks:\n"
             f"      spire-net:\n"
             f"        ipv4_address: {proxy_ip}\n"
@@ -300,7 +367,7 @@ def main():
             f"      - NET_ADMIN\n"
             f"    command: python docker/run_client_twin.py "
             f"--type=plc --id={proxy_id} "
-            f"--rtus={rtu_ids} -ip={proxy_ip} -num_twin={num_twins}\n"
+            f"--rtus={rtu_ids} -ip={proxy_ip} -num_twins={num_twins}\n"
         )
 
     # HMI client
@@ -314,6 +381,7 @@ def main():
             f"    profiles:\n"
             f"      - full\n"
             f"    container_name: spire-hmi_{dir_letter}\n"
+            f"    working_dir: /twins/spire{dir_letter}\n"
             f"    networks:\n"
             f"      spire-net:\n"
             f"        ipv4_address: {padded_hmi_ip}\n"
@@ -339,6 +407,8 @@ def main():
     )
 
     (out_dir / "docker-compose.yml").write_text(docker_compose_content)
+    generate_dockerfile(num_twins, cfg["conf_suffix"])
+    print(f"Config generation complete!")
 
 
 

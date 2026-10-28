@@ -196,7 +196,7 @@ void IOProcManager::add_io_proc(std::string id, std::string bin_path, SocketAddr
     
     this_io_proc.sockets.to = IPC_DGram_SendOnly_Sock(); // for sending something TO the child process (child being the IO Process)
     std::string ipc_path = (this->client_type == "hmi"? IPC_FROM_IOPROC_CHILD_CLIENTHMI: IPC_FROM_IOPROC_CHILD_CLIENTRTUPLC);
-    this_io_proc.sockets.from = IPC_DGram_Sock((ipc_path + this->proxy_id).c_str()); // for receiving something FROM the child process (child being the IO Process)
+    this_io_proc.sockets.from = IPC_DGram_Sock((ipc_path + id + "_" + this->proxy_id).c_str()); // for receiving something FROM the child process (child being the IO Process)
 
     this->io_procs[id] = this_io_proc;
 }
@@ -218,7 +218,7 @@ void IOProcManager::fork_io_proc(IOProcess &io_proc, std::string id) {
     // child -- run program on path
     // Note 1: by convention, arg 0 is the prog name. Note 2: execv required this array to be NULL terminated.
     std::string client_is_hmi= (this->client_type == "hmi"? "1": "0");
-    std::string ipc_path_suffix = this->proxy_id; 
+    std::string ipc_path_suffix = id + "_" + this->proxy_id;
     char* child_proc_cmd[7] = { 
         const_cast<char*>(io_proc.io_binary_path.c_str()), 
         const_cast<char*>(io_proc.spines_addr.ip_addr.c_str()), 
@@ -323,7 +323,7 @@ void IOProcManager::send_msg_to_all_procs(signed_message *msg, int nbytes) {
         std::cout << "PROXY: message from proxy, sending to SM (via IO Process with system ID " << id << ")\n";
         int this_sock = this_io_proc.sockets.to;
         std::string ipc_path = (this->client_type == "hmi"? IPC_TO_IOPROC_CHILD_CLIENTHMI: IPC_TO_IOPROC_CHILD_CLIENTRTUPLC);
-        std::string this_path_suffix = this->proxy_id;
+        std::string this_path_suffix = id + "_" + this->proxy_id;
         ret = IPC_Send(this_sock, (void *)msg, nbytes, (ipc_path + this_path_suffix).c_str());
         if(ret != nbytes) {
             std::cout << "PROXY: error sending to SM (via IO Process with system ID "<< id << "). ret = " << ret << "\n";
