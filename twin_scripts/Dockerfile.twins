@@ -1,0 +1,53 @@
+# Build from spireA with context '..' so both sibling source trees are available.
+# Share the dependency layer while compiling each system with its own headers.
+FROM almalinux:9 AS dependencies
+RUN dnf install -y vim make gcc g++ iproute-tc openssl-devel flex byacc python gdb valgrind dnf-plugins-core && \
+    dnf config-manager --set-enabled crb && \
+    dnf install -y epel-release && \
+    dnf install -y bison autoconf automake cmake qt5-devel qt5-qtwebengine-devel
+
+# Keep the original /app/spire layout during each build for existing scripts.
+FROM dependencies AS system_a
+COPY spireA /app/spire
+WORKDIR /app/spire
+ARG CONF_DIR=scripts/conf/conf_twinA
+# Recompile native objects in Linux, using the selected configuration.
+RUN find . -type f -name '*.o' -delete && \
+    CONF_NAME=$(basename "$CONF_DIR") && \
+    if [ "$CONF_DIR" != "example_conf/$CONF_NAME" ]; then \
+        cp -r "$CONF_DIR" "example_conf/$CONF_NAME"; \
+    fi && \
+    cd example_conf && bash install_conf.sh "$CONF_NAME"
+# Supply the existing library-build prompts, then build applications and keys.
+RUN printf 'Y\n1\n' | make libs
+RUN make
+RUN python3 docker/check_keys.py
+
+# B is built independently so its ports, replica addresses and keys stay separate.
+FROM dependencies AS system_b
+COPY spireB /app/spire
+WORKDIR /app/spire
+ARG TWIN_CONF_DIR=scripts/conf/conf_twinB
+RUN find . -type f -name '*.o' -delete && \
+    CONF_NAME=$(basename "$TWIN_CONF_DIR") && \
+    if [ "$TWIN_CONF_DIR" != "example_conf/$CONF_NAME" ]; then \
+        cp -r "$TWIN_CONF_DIR" "example_conf/$CONF_NAME"; \
+    fi && \
+    cd example_conf && bash install_conf.sh "$CONF_NAME"
+RUN printf 'Y\n1\n' | make libs
+RUN make
+RUN python3 docker/check_keys.py
+
+# Merge the built trees. A remains at its legacy path; the launcher uses spireA/B.
+FROM system_a AS twins
+COPY --from=system_b /app/spire /app/spireB
+RUN ln -s /app/spire /app/spireA
+WORKDIR /app/spire/proxy/io_process
+# Compile A's corrected I/O source twice, linked to each system's own code/keys.
+# SPIRE_DIR is relative to this WORKDIR; SPIRE_ROOT_DIR_REL_TO_PROXY is relative
+# to the parent proxy's working directory at runtime. Keep the trailing slashes.
+# Distinct object names prevent B from reusing the A-linked io_process.o.
+RUN rm -f io_process.o io_process io_process_B.o io_process_B && \
+    make SPIRE_DIR=../../ BINARY_NAME=io_process SPIRE_ROOT_DIR_REL_TO_PROXY=../ && \
+    make SPIRE_DIR=../../../spireB/ BINARY_NAME=io_process_B SPIRE_ROOT_DIR_REL_TO_PROXY=../../spireB/
+WORKDIR /app/spireA
