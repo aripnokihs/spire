@@ -53,8 +53,8 @@ namespace system_ns {
 #define CLIENT_KEYS_PRIME "prime/bin/keys";
 #define CLIENT_KEYS_SM    "scada_master/sm_keys"
 
-int HMI_scenario = PNNL;
-// int HMI_scenario = JHU;
+// int HMI_scenario = PNNL;
+int HMI_scenario = JHU;
 
 void parse_args(int ac, char **av, std::string &ioproc_spinesd_ip_addr, int &ioproc_spinesd_port);
 void itrc_init_ioproc(std::string ioproc_spinesd_ip_addr, int ioproc_spinesd_port);

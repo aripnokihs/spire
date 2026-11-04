@@ -37,6 +37,10 @@ To clear docker build cache:
 docker builder prune -a -f
 ```
 
+Copy data collector logs:
+```bash
+docker cp spire-hmi_A:/twins/spireA/logs/data_collector_logs/. ./local_logs
+```
 
 
 
